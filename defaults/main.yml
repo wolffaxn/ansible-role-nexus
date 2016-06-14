@@ -1,0 +1,13 @@
+---
+nexus_version: 2.13.0-01
+
+nexus_download_dir: /tmp
+nexus_install_dir: /usr/share
+nexus_run_dir: /var/run/nexus
+nexus_working_dir: /var/nexus
+
+nexus_user: nexus
+nexus_group: nexus
+nexus_user_shell: /bin/bash
+
+nexus_port: 8000

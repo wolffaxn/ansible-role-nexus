@@ -1,0 +1,116 @@
+---
+- name: Assert platform is supported
+  assert:
+    that:
+      - ansible_os_family in nexus_supported_platforms
+
+- name: Ensure Sonatype Nexus download directory exists
+  file: path="{{ nexus_download_dir }}" state=directory
+  become: true
+
+- name: Download Sonatype Nexus (OSS)
+  get_url:
+    url: http://download.sonatype.com/nexus/oss/{{ nexus_tarball }}
+    dest: "{{ nexus_download_dir }}/{{ nexus_tarball }}"
+  register: nexus_redis_get
+  until: "'OK' in nexus_redis_get.msg or 'file already exists' in nexus_redis_get.msg"
+  retries: 5
+  delay: 5
+  become: false
+
+- name: Ensure Sonatype Nexus group exists
+  group: name="{{ nexus_group }}" state=present
+  become: true
+
+- name: Ensure Sonatype Nexus user exists
+  user: name="{{ nexus_group }}" group="{{ nexus_user }}" shell="{{ nexus_user_shell }}" state=present
+  become: true
+
+- name: Ensure Sonatype Nexus installation directory exists
+  file: path="{{ nexus_install_dir }}" state=directory
+  become: true
+
+- name: Unpack Sonatype Nexus
+  unarchive:
+    dest: "{{ nexus_install_dir }}"
+    src: "{{ nexus_download_dir }}/{{ nexus_tarball }}"
+    copy: no
+    creates: "{{ nexus_install_dir }}/nexus-{{ nexus_version }}"
+    force: false
+    owner: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+    mode: "go-w"
+  become: true
+
+- name: Set ownership and permissions on Sonatype Nexus installation directory
+  file:
+    path: "{{ nexus_install_dir }}/nexus-{{ nexus_version }}"
+    state: "directory"
+    owner: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+    mode: "go-w"
+    recurse: true
+  become: true
+
+- name: Create symlink
+  file:
+    src: "{{ nexus_install_dir }}/nexus-{{ nexus_version }}"
+    dest: "{{ nexus_install_dir }}/nexus"
+    owner: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+    force: true
+    state: link
+  become: true
+
+- name: Ensure Sonatype Nexus working directory exists
+  file: path="{{ nexus_working_dir }}" state="directory"
+  become: true
+
+- name: Set ownership and permissions on Sonatype Nexus working directory
+  file:
+    path: "{{ nexus_working_dir }}"
+    state: "directory"
+    owner: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+    mode: "go-w"
+    recurse: true
+  become: true
+
+- name: Delete default Sonatype working directory
+  file: path="{{ nexus_install_dir }}/sonatype-work" state="absent"
+  become: true
+
+- name: Ensure Sonatype Nexus pid directory exists
+  file: path={{ nexus_run_dir }} state="directory"
+  become: true
+
+- name: Set ownership and permissions on Sonatype Nexus pid directory
+  file:
+    path: "{{ nexus_run_dir }}"
+    state: "directory"
+    owner: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+  become: true
+
+- name: Configure http port in nexus.properties
+  lineinfile:
+    dest: "{{ nexus_install_dir }}/nexus-{{ nexus_version }}/conf/nexus.properties"
+    line: "application-port={{ nexus_port }}"
+    regexp: "application-port=.*"
+    state: present
+  become: true
+
+- name: Configure Sonatype Nexus working directory in nexus.properties
+  lineinfile:
+    dest: "{{ nexus_install_dir }}/nexus-{{ nexus_version }}/conf/nexus.properties"
+    line: "nexus-work={{ nexus_working_dir }}"
+    regexp: "nexus-work=.*"
+    state: present
+  become: true
+
+- block:
+
+  - name: Ensure Nexus is started
+    service: name=nexus state=started enabled=yes
+
+  when: ansible_os_family == "RedHat"
