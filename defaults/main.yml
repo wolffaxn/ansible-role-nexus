@@ -10,4 +10,4 @@ nexus_user: nexus
 nexus_group: nexus
 nexus_user_shell: /bin/bash
 
-nexus_port: 8000
+nexus_port: 8081
