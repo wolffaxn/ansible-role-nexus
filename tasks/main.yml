@@ -7,7 +7,6 @@
 
 - name: Ensure Sonatype Nexus download directory exists
   file: path="{{ nexus_download_dir }}" state=directory
-  become: true
   tags: nexus
 
 - name: Download Sonatype Nexus (OSS)
@@ -18,22 +17,18 @@
   until: "'OK' in nexus_redis_get.msg or 'file already exists' in nexus_redis_get.msg"
   retries: 5
   delay: 5
-  become: false
   tags: nexus
 
 - name: Ensure Sonatype Nexus group exists
   group: name="{{ nexus_group }}" state=present
-  become: true
   tags: nexus
 
 - name: Ensure Sonatype Nexus user exists
   user: name="{{ nexus_group }}" group="{{ nexus_user }}" shell="{{ nexus_user_shell }}" state=present
-  become: true
   tags: nexus
 
 - name: Ensure Sonatype Nexus installation directory exists
   file: path="{{ nexus_install_dir }}" state=directory
-  become: true
   tags: nexus
 
 - name: Unpack Sonatype Nexus
@@ -46,7 +41,6 @@
     owner: "{{ nexus_user }}"
     group: "{{ nexus_group }}"
     mode: "go-w"
-  become: true
   tags: nexus
 
 - name: Set ownership and permissions on Sonatype Nexus installation directory
@@ -57,7 +51,6 @@
     group: "{{ nexus_group }}"
     mode: "go-w"
     recurse: true
-  become: true
   tags: nexus
 
 - name: Create symlink
@@ -68,12 +61,10 @@
     group: "{{ nexus_group }}"
     force: true
     state: link
-  become: true
   tags: nexus
 
 - name: Ensure Sonatype Nexus working directory exists
   file: path="{{ nexus_working_dir }}" state="directory"
-  become: true
   tags: nexus
 
 - name: Set ownership and permissions on Sonatype Nexus working directory
@@ -84,17 +75,14 @@
     group: "{{ nexus_group }}"
     mode: "go-w"
     recurse: true
-  become: true
   tags: nexus
 
 - name: Delete default Sonatype working directory
   file: path="{{ nexus_install_dir }}/sonatype-work" state="absent"
-  become: true
   tags: nexus
 
 - name: Ensure Sonatype Nexus pid directory exists
   file: path={{ nexus_run_dir }} state="directory"
-  become: true
   tags: nexus
 
 - name: Set ownership and permissions on Sonatype Nexus pid directory
@@ -103,7 +91,6 @@
     state: "directory"
     owner: "{{ nexus_user }}"
     group: "{{ nexus_group }}"
-  become: true
   tags: nexus
 
 - name: Configure http port in nexus.properties
@@ -112,7 +99,6 @@
     line: "application-port={{ nexus_port }}"
     regexp: "application-port=.*"
     state: present
-  become: true
   tags: nexus
 
 - name: Configure Sonatype Nexus working directory in nexus.properties
@@ -121,7 +107,6 @@
     line: "nexus-work={{ nexus_working_dir }}"
     regexp: "nexus-work=.*"
     state: present
-  become: true
   tags: nexus
 
 - block:
