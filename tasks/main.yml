@@ -2,7 +2,8 @@
 - name: Assert platform is supported
   assert:
     that:
-      - ansible_os_family in nexus_supported_platforms
+      - ansible_architecture ['x86_64']
+      - ansible_os_family in ['RedHat']
   tags: nexus
 
 - name: Ensure Sonatype Nexus download directory exists

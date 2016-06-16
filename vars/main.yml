@@ -1,7 +1,4 @@
 ---
-nexus_supported_platforms:
-  - RedHat
-
 # download mirror
 nexus_mirror: "http://download.sonatype.com/nexus/oss/{{ nexus_tarball }}"
 # maven tarball
