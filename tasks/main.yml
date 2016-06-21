@@ -102,5 +102,5 @@
     - { regexp: 'application-port=.*', line: 'application-port={{ nexus_port }}' }
     - { regexp: 'nexus-work=.*', line: 'nexus-work={{ nexus_working_path }}' }
 
-- name: Ensure Nexus is started
+- name: ensure Nexus is started
   service: name=nexus state=started enabled=yes
