@@ -1,119 +1,106 @@
 ---
-- name: Assert platform is supported
+- name: assert platform is supported
   assert:
     that:
-      - ansible_architecture ['x86_64']
+      - ansible_architecture in ['x86_64']
       - ansible_os_family in ['RedHat']
-  tags: nexus
 
-- name: Ensure Sonatype Nexus download directory exists
-  file: path="{{ nexus_download_dir }}" state=directory
-  tags: nexus
+- name: set os name
+  set_fact:
+    os_name: linux
+  when: ansible_system == 'Linux'
 
-- name: Download Sonatype Nexus (OSS)
+- name: set os architecture
+  set_fact:
+    os_arch: x64
+  when: ansible_architecture == 'x86_64'
+
+- name: include version-specific variables
+  include_vars: "versions/{{ nexus_version }}.yml"
+
+- name: ensure download directory exists
+  file: path="{{ nexus_download_path }}" state=directory
+
+- name: get Nexus tarball (tar.gz)
   get_url:
-    url: http://download.sonatype.com/nexus/oss/{{ nexus_tarball }}
-    dest: "{{ nexus_download_dir }}/{{ nexus_tarball }}"
+    url: "{{ nexus_mirror }}/{{ nexus_tarball }}"
+    checksum: "{{ nexus_redis_checksum }}"
+    dest: "{{ nexus_download_path }}/{{ nexus_tarball }}"
+    owner: root
+    group: root
+    mode: "u=rwx,go=rx"
   register: nexus_redis_get
   until: "'OK' in nexus_redis_get.msg or 'file already exists' in nexus_redis_get.msg"
-  retries: 5
-  delay: 5
-  tags: nexus
+  retries: "{{ download_retries }}"
+  delay: "{{ download_delay }}"
 
-- name: Ensure Sonatype Nexus group exists
+- name: ensure Nexus group exists
   group: name="{{ nexus_group }}" state=present
-  tags: nexus
 
-- name: Ensure Sonatype Nexus user exists
+- name: ensure Nexus user exists
   user: name="{{ nexus_group }}" group="{{ nexus_user }}" shell="{{ nexus_user_shell }}" state=present
-  tags: nexus
 
-- name: Ensure Sonatype Nexus installation directory exists
-  file: path="{{ nexus_install_dir }}" state=directory
-  tags: nexus
+- name: ensure installation directory exists
+  file:
+    path: "{{ nexus_install_path }}/nexus-{{ nexus_version }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "u=rwx,go=rx"
 
-- name: Unpack Sonatype Nexus
+- name: install Nexus tarball (tar.gz)
   unarchive:
-    dest: "{{ nexus_install_dir }}"
-    src: "{{ nexus_download_dir }}/{{ nexus_tarball }}"
+    src: "{{ nexus_download_path }}/{{ nexus_tarball }}"
+    dest: "{{ nexus_install_path }}"
+    owner: "{{ nexus_user }}"
+    group: "{{ nexus_group }}"
+    mode: "go-w"
     copy: no
-    creates: "{{ nexus_install_dir }}/nexus-{{ nexus_version }}"
-    force: false
-    owner: "{{ nexus_user }}"
-    group: "{{ nexus_group }}"
-    mode: "go-w"
-  tags: nexus
 
-- name: Set ownership and permissions on Sonatype Nexus installation directory
+- name: create symbolic link
   file:
-    path: "{{ nexus_install_dir }}/nexus-{{ nexus_version }}"
-    state: "directory"
-    owner: "{{ nexus_user }}"
-    group: "{{ nexus_group }}"
-    mode: "go-w"
-    recurse: true
-  tags: nexus
-
-- name: Create symlink
-  file:
-    src: "{{ nexus_install_dir }}/nexus-{{ nexus_version }}"
-    dest: "{{ nexus_install_dir }}/nexus"
+    src: "{{ nexus_install_path }}/nexus-{{ nexus_version }}"
+    dest: "{{ nexus_install_path }}/nexus"
     owner: "{{ nexus_user }}"
     group: "{{ nexus_group }}"
     force: true
     state: link
-  tags: nexus
 
-- name: Ensure Sonatype Nexus working directory exists
-  file: path="{{ nexus_working_dir }}" state="directory"
-  tags: nexus
-
-- name: Set ownership and permissions on Sonatype Nexus working directory
+- name: ensure Nexus working directory exists
   file:
-    path: "{{ nexus_working_dir }}"
+    path: "{{ nexus_working_path }}"
     state: "directory"
     owner: "{{ nexus_user }}"
     group: "{{ nexus_group }}"
     mode: "go-w"
-    recurse: true
-  tags: nexus
 
-- name: Delete default Sonatype working directory
-  file: path="{{ nexus_install_dir }}/sonatype-work" state="absent"
-  tags: nexus
-
-- name: Ensure Sonatype Nexus pid directory exists
-  file: path={{ nexus_run_dir }} state="directory"
-  tags: nexus
-
-- name: Set ownership and permissions on Sonatype Nexus pid directory
+- name: ensure Nexus pid directory exists
   file:
-    path: "{{ nexus_run_dir }}"
+    path: "{{ nexus_run_path }}"
     state: "directory"
     owner: "{{ nexus_user }}"
     group: "{{ nexus_group }}"
-  tags: nexus
+    mode: "go-w"
 
-- name: Configure http port in nexus.properties
+- name: delete default sonatype-work directory
+  file: path="{{ nexus_install_path }}/sonatype-work" state="absent"
+
+- name: remove temporary downloaded files, if requested
+  file: path="{{ nexus_download_path }}/{{ item }}" state=absent
+  with_items:
+    - "{{ nexus_tarball }}"
+  ignore_errors: true
+  when: nexus_download_cleanup
+
+- name: configure Nexus (nexus.properties)
   lineinfile:
-    dest: "{{ nexus_install_dir }}/nexus-{{ nexus_version }}/conf/nexus.properties"
-    line: "application-port={{ nexus_port }}"
-    regexp: "application-port=.*"
+    dest: "{{ nexus_install_path }}/nexus-{{ nexus_version }}/conf/nexus.properties"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
     state: present
-  tags: nexus
+  with_items:
+    - { regexp: 'application-port=.*', line: 'application-port={{ nexus_port }}' }
+    - { regexp: 'nexus-work=.*', line: 'nexus-work={{ nexus_working_path }}' }
 
-- name: Configure Sonatype Nexus working directory in nexus.properties
-  lineinfile:
-    dest: "{{ nexus_install_dir }}/nexus-{{ nexus_version }}/conf/nexus.properties"
-    line: "nexus-work={{ nexus_working_dir }}"
-    regexp: "nexus-work=.*"
-    state: present
-  tags: nexus
-
-- block:
-
-  - name: Ensure Nexus is started
-    service: name=nexus state=started enabled=yes
-    tags: nexus
-
-  when: ansible_os_family == "RedHat"
+- name: Ensure Nexus is started
+  service: name=nexus state=started enabled=yes

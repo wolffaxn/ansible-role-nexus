@@ -1,5 +1,8 @@
 ---
 # download mirror
-nexus_mirror: "http://download.sonatype.com/nexus/oss/{{ nexus_tarball }}"
-# maven tarball
+nexus_mirror: "http://download.sonatype.com/nexus/oss"
+# nexus tarball
 nexus_tarball: "nexus-{{ nexus_version }}-bundle.tar.gz"
+# download settings
+download_retries: 5
+download_delay: 5
