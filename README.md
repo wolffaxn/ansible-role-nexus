@@ -1,5 +1,7 @@
 # Ansible Role - Sonatype Nexus
 
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/wolffaxn/ansible-role-nexus/master/LICENSE)
+
 Installs Sonatype Nexus (OSS) for RedHat/CentOS linux servers.
 
 ## Requirements
