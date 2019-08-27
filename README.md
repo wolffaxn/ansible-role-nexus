@@ -1,6 +1,9 @@
 # Ansible Role - Sonatype Nexus
 
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/wolffaxn/ansible-role-nexus/master/LICENSE)
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![GitHub last commit (branch)](https://img.shields.io/github/last-commit/wolffaxn/ansible-role-nexus/master.svg)](https://github.com/wolffaxn/ansible-role-nexus)
+
+## About
 
 Installs Sonatype Nexus (OSS) for RedHat/CentOS linux servers.
 
@@ -45,4 +48,4 @@ For RHEL / CentOS
 ```
 ## License
 
-This project is licensed under the terms of the MIT license. See the [LICENSE](LICENSE) file.
+This project is licensed under the terms of the [MIT license](LICENSE).
